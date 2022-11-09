@@ -1,6 +1,6 @@
 #include<stdio.h>
 #include"conio2.h"
-#define BOARD_SIZE 9
+#define BOARD_SIZE 19
 #define DEAFULT_DISPLAY true
 #define BOARD_BORDER_COLOR 13
 
@@ -78,9 +78,9 @@ void print_legend(int startx, int starty, char board[][BOARD_SIZE], int x, int y
 	cputs(txt);
 	gotoxy(startx, starty++);
 	textcolor(3);
-	if(turnBlack) cputs("  turn : BLACK");
+	if(turnBlack) cputs("  turn : BLACK (X)");
 	textcolor(4);
-	if(!turnBlack)cputs("  turn : WHITE");
+	if(!turnBlack)cputs("  turn : WHITE (O)");
 	textcolor(WHITE);
 
 	//sprintf(txt, "White : (%d,%d)", x, y);
