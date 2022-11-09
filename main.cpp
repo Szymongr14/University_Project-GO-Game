@@ -1,12 +1,8 @@
 #include<stdio.h>
 #include"conio2.h"
-#define BOARD_SIZE 19
+#define BOARD_SIZE 9
 #define DEAFULT_DISPLAY true
 #define BOARD_BORDER_COLOR 13
-
-
-
-
 
 
 void fill_field(char field[][BOARD_SIZE]) {
@@ -19,11 +15,9 @@ void fill_field(char field[][BOARD_SIZE]) {
 	}
 }
 
-bool isLegal(int x, int y, int a, int b) {
-	if (y == b) {
-		return false;
-	}
-	return true;
+bool isLegal(char board[][BOARD_SIZE],int x, int y, int startx, int starty) {
+	if (board[y - starty][(x - startx) / 2] == '*') return true;
+	return false;
 }
 
 void print_board(int x, int y, char field[][BOARD_SIZE]) {
@@ -69,7 +63,7 @@ void print_board(int x, int y, char field[][BOARD_SIZE]) {
 	textcolor(WHITE);
 }
 
-void print_legend(int startx, int starty, char board[][BOARD_SIZE], int x, int y, int startx_board, int starty_board) {
+void print_legend(int startx, int starty, char board[][BOARD_SIZE], int x, int y, int startx_board, int starty_board,bool turnBlack) {
 	char txt[32];
 	gotoxy(startx, starty++);
 	cputs("     q = exit");
@@ -79,10 +73,16 @@ void print_legend(int startx, int starty, char board[][BOARD_SIZE], int x, int y
 	cputs("     i = place a stone");
 	gotoxy(startx, starty++);
 	cputs("     n = new game");
-	sprintf(txt, "current (x,y) : (%d,%d)", x, y);
 	gotoxy(startx, starty++);
+	sprintf(txt, "current  (x,y) : (%d,%d)", x, y);
 	cputs(txt);
-	gotoxy(startx, 12);
+	gotoxy(startx, starty++);
+	textcolor(3);
+	if(turnBlack) cputs("  turn : BLACK");
+	textcolor(4);
+	if(!turnBlack)cputs("  turn : WHITE");
+	textcolor(WHITE);
+
 	//sprintf(txt, "White : (%d,%d)", x, y);
 	//sprintf(txt, "Black : (%d,%d)", x, y);
 	print_board(startx_board, starty_board, board);
@@ -93,7 +93,7 @@ int main() {
 	char board[BOARD_SIZE][BOARD_SIZE];
 	char txt[32];
 	bool turnBlack = true;
-	textmode(C80);
+	textmode(C80);//console widnow size
 
 #ifndef __cplusplus
 	Conio2_Init();
@@ -128,7 +128,7 @@ int main() {
 		cputs("Szymon Groszkowski nr 193141");
 		
 		
-		print_legend(legend_x, legend_y, board, x, y, startx, starty);
+		print_legend(legend_x, legend_y, board, x, y, startx, starty,turnBlack);
 		
 		
 		gotoxy(x, y);
@@ -149,14 +149,22 @@ int main() {
 		}
 		// putting stone
 		if (zn == 'i') {
-			if (turnBlack) {
+			if (turnBlack && isLegal(board,x,y,startx,starty)) {
 				board[y - starty][(x - startx) / 2] = 'X';
 				turnBlack = false;
 			}
-			else {
+			else if(!turnBlack && board[y - starty][(x - startx) / 2] == '*') {
 				board[y - starty][(x - startx) / 2] = 'O';
 				turnBlack = true;
 			}
+		}
+
+		//new game
+		if (zn == 'n') {
+			fill_field(board);
+			x = startx;
+			y = starty;
+			//wyzerowac punkty black and white
 		}
 	} while (zn != 'q');
 
