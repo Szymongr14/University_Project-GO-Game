@@ -1,8 +1,15 @@
 #include<stdio.h>
 #include"conio2.h"
-#define BOARD_SIZE 19
+#define BOARD_SIZE 13
 #define DEAFULT_DISPLAY true
 #define BOARD_BORDER_COLOR 13
+#define EMPTY '-'
+#define BLACK_STONE 'X'
+#define WHITE_STONE 'O'
+
+struct Player {
+	int score;
+};
 
 
 void fill_field(char field[][BOARD_SIZE]) {
@@ -10,13 +17,55 @@ void fill_field(char field[][BOARD_SIZE]) {
 	{
 		for (int j = 0; j < BOARD_SIZE; j++)
 		{
-			field[j][i] = '*';
+			field[j][i] = EMPTY;
 		}
 	}
 }
 
-bool isLegal(char board[][BOARD_SIZE],int x, int y, int startx, int starty) {
-	if (board[y - starty][(x - startx) / 2] == '*') return true;
+bool isLegal(char board[][BOARD_SIZE], int x, int y, int startx, int starty) {
+
+	//check if coordinate is empty
+	if (board[y - starty][(x - startx) / 2] == EMPTY)
+	{	
+		
+		//check if coordinate is edge
+		if (y - starty == 0 || y - starty == BOARD_SIZE - 1 || (x - startx) / 2 == 0 || (x - startx) / 2 == BOARD_SIZE - 1) {
+			//left top corner
+			if (y - starty == 0 && (x - startx) / 2 == 0) {
+				if (board[y - starty + 1][(x - startx) / 2] == EMPTY || board[y - starty][(x + 2 - startx) / 2] == EMPTY) return true;
+			}
+			//left bottom corner
+			if (y - starty == BOARD_SIZE - 1 && (x - startx) / 2 == 0) {
+				if (board[y - starty - 1][(x - startx) / 2] == EMPTY || board[y - starty][(x + 2 - startx) / 2] == EMPTY) return true;
+			}
+			//right top corner
+			if (y - starty == 0 && (x - startx) / 2 == BOARD_SIZE - 1) {
+				if (board[y - starty + 1][(x - startx) / 2] == EMPTY || board[y - starty][(x - 2 - startx) / 2] == EMPTY) return true;
+			}
+			//left top corner
+			if (y - starty == BOARD_SIZE - 1 && (x - startx) / 2 == BOARD_SIZE - 1) {
+				if (board[y - starty + 1][(x - startx) / 2] == EMPTY || board[y - starty][(x - 2 - startx) / 2] == EMPTY) return true;
+			}
+			//top edge
+			else if (y - starty == 0) {
+				if (board[y - starty + 1][(x - startx) / 2] == EMPTY || board[y - starty][(x - 2 - startx) / 2] == EMPTY || board[y - starty][((x + 2 - startx) / 2)] == EMPTY) return true;
+			}
+			//bottom edge
+			else if (y - starty == BOARD_SIZE - 1) {
+				if (board[y - starty - 1][(x - startx) / 2] == EMPTY || board[y - starty][(x - 2 - startx) / 2] == EMPTY || board[y - starty][((x + 2 - startx) / 2)] == EMPTY) return true;
+			}
+			//right edge
+			else if ((x - startx) / 2 == BOARD_SIZE - 1) {
+				if (board[y - starty - 1][(x - startx) / 2] == EMPTY || board[y - starty][(x - 2 - startx) / 2] == EMPTY || board[y - starty + 1][(x - startx) / 2] == EMPTY) return true;
+			}
+			//left edge
+			else if ((x - startx) / 2 == 0) {
+				if (board[y - starty - 1][(x - startx) / 2] == EMPTY || board[y - starty][(x + 2 - startx) / 2] == EMPTY || board[y - starty + 1][(x - startx) / 2] == EMPTY) return true;
+			}
+		}
+		//minimum one liberty if is not edge
+		else if ((board[y - starty + 1][(x - startx) / 2] == EMPTY || board[y - starty - 1][(x - startx) / 2] == EMPTY || board[y - starty][((x + 2 - startx) / 2)] == EMPTY || board[y - starty][((x - 2 - startx) / 2)] == EMPTY)) return true;
+	}  
 	return false;
 }
 
@@ -33,7 +82,7 @@ void print_board(int x, int y, char field[][BOARD_SIZE]) {
 	//printing board
 	for (int i = 0; i < BOARD_SIZE; i++)
 	{
-		x = startx; // y is always ittering from starting value
+		x = startx; // x is always ittering from starting value
 		
 		//right border
 		gotoxy(x-1, y);
@@ -63,8 +112,13 @@ void print_board(int x, int y, char field[][BOARD_SIZE]) {
 	textcolor(WHITE);
 }
 
-void print_legend(int startx, int starty, char board[][BOARD_SIZE], int x, int y, int startx_board, int starty_board,bool turnBlack) {
+void print_legend(int startx, int starty, char board[][BOARD_SIZE], int x, int y, int startx_board, int starty_board,bool turnBlack, int WhitePoints, int BlackPoints) {
 	char txt[32];
+	char txt1[32];
+	gotoxy(startx, starty++);
+	textcolor(3);
+	cputs("  GAME CONTROLS");
+	textcolor(WHITE);
 	gotoxy(startx, starty++);
 	cputs("     q = exit");
 	gotoxy(startx, starty++);
@@ -74,17 +128,22 @@ void print_legend(int startx, int starty, char board[][BOARD_SIZE], int x, int y
 	gotoxy(startx, starty++);
 	cputs("     n = new game");
 	gotoxy(startx, starty++);
-	sprintf(txt, "current  (x,y) : (%d,%d)", x, y);
+	sprintf(txt, "current (x,y) : (%d,%d)", x, y);
 	cputs(txt);
+	gotoxy(startx, starty+=3);
 	gotoxy(startx, starty++);
 	textcolor(3);
-	if(turnBlack) cputs("  turn : BLACK (X)");
-	textcolor(4);
-	if(!turnBlack)cputs("  turn : WHITE (O)");
+	cputs("  GAME STATS");
 	textcolor(WHITE);
-
-	//sprintf(txt, "White : (%d,%d)", x, y);
-	//sprintf(txt, "Black : (%d,%d)", x, y);
+	gotoxy(startx, starty++);
+	if(turnBlack) cputs("turn : BLACK");
+	if(!turnBlack)cputs("turn : WHITE");
+	gotoxy(startx, starty++);
+	sprintf(txt1, "White : %d", WhitePoints );
+	cputs(txt1);
+	gotoxy(startx, starty++);
+	sprintf(txt, "Black : %d", BlackPoints);
+	cputs(txt);
 	print_board(startx_board, starty_board, board);
 }
 
@@ -93,6 +152,9 @@ int main() {
 	char board[BOARD_SIZE][BOARD_SIZE];
 	char txt[32];
 	bool turnBlack = true;
+	struct Player white, black;
+	white.score = 3;
+	black.score = 5;
 	textmode(C80);//console widnow size
 
 #ifndef __cplusplus
@@ -128,7 +190,7 @@ int main() {
 		cputs("Szymon Groszkowski nr 193141");
 		
 		
-		print_legend(legend_x, legend_y, board, x, y, startx, starty,turnBlack);
+		print_legend(legend_x, legend_y, board, x, y, startx, starty,turnBlack,white.score,black.score);
 		
 		
 		gotoxy(x, y);
@@ -150,11 +212,11 @@ int main() {
 		// putting stone
 		if (zn == 'i') {
 			if (turnBlack && isLegal(board,x,y,startx,starty)) {
-				board[y - starty][(x - startx) / 2] = 'X';
+				board[y - starty][(x - startx) / 2] = BLACK_STONE;
 				turnBlack = false;
 			}
-			else if(!turnBlack && board[y - starty][(x - startx) / 2] == '*') {
-				board[y - starty][(x - startx) / 2] = 'O';
+			else if(!turnBlack && isLegal(board, x, y, startx, starty)) {
+				board[y - starty][(x - startx) / 2] = WHITE_STONE;
 				turnBlack = true;
 			}
 		}
@@ -164,7 +226,8 @@ int main() {
 			fill_field(board);
 			x = startx;
 			y = starty;
-			//wyzerowac punkty black and white
+			white.score = 0;
+			black.score = 0;
 		}
 	} while (zn != 'q');
 
