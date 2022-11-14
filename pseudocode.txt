@@ -1,0 +1,34 @@
+COUNT(x, color) :
+    IF x is not off the edge
+    THEN
+    IF there is a stone at x AND it is the given color AND it is not marked THEN
+        mark it
+        CALL COUNT(NORTH(x), color)
+        CALL COUNT(EAST(x) , color)
+        CALL COUNT(SOUTH(x) , color)
+        CALL COUNT(WEST(x), color)
+    ELSE IF there is no stone at x
+    THEN
+        mark the point as a liberty
+        increment the liberty count
+    END
+END
+
+
+MAIN :
+    LOOP
+        display the board
+        get white's move from keyboard
+        CALL WEFFECT for the effect of white's move
+        display the board
+        get black's move from keyboard
+
+    END
+
+
+    WEFFECT :
+    FOR each point x with a black stone DO
+        CALL COUNT(x,black)
+        IF the group has no liberties THEN remove its stones
+    END
+END

@@ -3,16 +3,43 @@
 #define BOARD_SIZE 13
 #define DEAFULT_DISPLAY true
 #define BOARD_BORDER_COLOR 13
-#define EMPTY '-'
-#define BLACK_STONE 'X'
-#define WHITE_STONE 'O'
+#define EMPTY 0
+#define BLACK_STONE 1
+#define WHITE_STONE 2
+#define MARKER 4
+#define LIBERTY 3
+
+char pieces [] = { '-','X','O','+','b' };
+
+//int* block[];
+//int* liberties[];
+
+bool isInArray(int* tab[], int* element, int size) {
+	for (int i = 0; i < size; i++) {
+		if (tab[i] == element) {
+			return true;
+		}
+	}
+	return false;
+}
+
 
 struct Player {
 	int score;
 };
 
 
-void fill_field(char field[][BOARD_SIZE]) {
+//void count(char board[][board_size], int x, int y, int startx, int starty, bool blackturn) {
+//	//init piece
+//	char piece = board[y - starty][(x - startx) / 2];
+//	
+//	if (blackturn) {
+//		if(piece==black_stone && isinarray(block,&(board[y - starty][(x - startx) / 2]),board_size*board_size)
+//	}
+//}
+
+
+void fill_field(int field[][BOARD_SIZE]) {
 	for (int i = 0; i < BOARD_SIZE; i++)
 	{
 		for (int j = 0; j < BOARD_SIZE; j++)
@@ -22,7 +49,7 @@ void fill_field(char field[][BOARD_SIZE]) {
 	}
 }
 
-bool isLegal(char board[][BOARD_SIZE], int x, int y, int startx, int starty) {
+bool isLegal(int board[][BOARD_SIZE], int x, int y, int startx, int starty) {
 
 	//check if coordinate is empty
 	if (board[y - starty][(x - startx) / 2] == EMPTY)
@@ -69,7 +96,7 @@ bool isLegal(char board[][BOARD_SIZE], int x, int y, int startx, int starty) {
 	return false;
 }
 
-void print_board(int x, int y, char field[][BOARD_SIZE]) {
+void print_board(int x, int y, int field[][BOARD_SIZE]) {
 	int starty = y;
 	int startx = x;
 	//top border
@@ -92,7 +119,7 @@ void print_board(int x, int y, char field[][BOARD_SIZE]) {
 		for (int j = 0; j < BOARD_SIZE; j++)
 		{
 			gotoxy(x, y);
-			putch(field[i][j]);
+			putch(pieces[field[i][j]]);
 
 			x += 2;
 		}
@@ -112,7 +139,7 @@ void print_board(int x, int y, char field[][BOARD_SIZE]) {
 	textcolor(WHITE);
 }
 
-void print_legend(int startx, int starty, char board[][BOARD_SIZE], int x, int y, int startx_board, int starty_board,bool turnBlack, int WhitePoints, int BlackPoints) {
+void print_legend(int startx, int starty, int board[][BOARD_SIZE], int x, int y, int startx_board, int starty_board,bool turnBlack, int WhitePoints, int BlackPoints) {
 	char txt[32];
 	char txt1[32];
 	gotoxy(startx, starty++);
@@ -149,7 +176,7 @@ void print_legend(int startx, int starty, char board[][BOARD_SIZE], int x, int y
 
 int main() {
 	int zn = 0, zero = 0, startx, starty, x, y, legend_x, legend_y;
-	char board[BOARD_SIZE][BOARD_SIZE];
+	int board[BOARD_SIZE][BOARD_SIZE];
 	char txt[32];
 	bool turnBlack = true;
 	struct Player white, black;
