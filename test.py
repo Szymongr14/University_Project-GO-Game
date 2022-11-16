@@ -164,7 +164,7 @@ def count(square, color):
         block.append(square)
         
         # mark the stone
-        board[square] = MARKER
+        board[square] |= MARKER
         
         # look for neighbours recursively
         count(square - BOARD_RANGE, color) # walk north
@@ -204,7 +204,7 @@ def main():
     print_board()
     
     count(82, BLACK)
-    clear_block();
+    clear_block()
     print_board()
     print('block:', block)
     print('liberties:', liberties)
