@@ -8,7 +8,10 @@
 #define DOWN_ARROW 0x50
 #define LEFT_ARROW 0x4b
 #define RIGHT_ARROW 0x4d
-
+#define ENTER 0x0d
+//ignore fsnanf and fprintf warnings
+#define _CRT_SECURE_NO_WARNINGS
+#pragma warning( disable : 6031 )
 
 // stone encoding
 #define EMPTY 0
@@ -39,6 +42,91 @@ bool isInChain(int* tab[], int *element) {
 struct Player {
 	int score;
 }white, black;
+
+void handicap(int board[][BOARD_RANGE]){
+	//restarting game
+	clrscr();
+	restore_board(board);
+	white.score = 0;
+	black.score = 0;
+	gotoxy(10,4);
+	textcolor(3);
+	cputs("Handicap Controls");
+	textcolor(WHITE);
+	gotoxy(10, 5);
+	cputs("     q = exit");
+	gotoxy(10, 6);
+	cputs("arrows = moving");
+	gotoxy(10, 7);
+	cputs("     i = place a black stone");
+	
+
+
+}
+void save(int board[][BOARD_RANGE]) {
+	char filename[20];
+	clrscr();
+	FILE* file;
+	_setcursortype(_NORMALCURSOR);
+	gotoxy(30, 11);
+	textcolor(3);
+	cputs("Saving stats file");
+	textcolor(WHITE);
+	gotoxy(15, 12);
+	cputs("Type a file name (ENTER to confirm): ");
+	int i = 0;
+	_setcursortype(_NOCURSOR);
+	while (true) {
+		char letter = getche();
+		if (letter == ENTER) break;
+		filename[i++] = letter;
+	}
+	filename[i] = '\0';
+	file = fopen(filename, "w");
+	for (int i = 0; i < BOARD_RANGE; i++) {
+		for (int j = 0; j < BOARD_RANGE; j++) {
+			fprintf(file, "%d\n", board[i][j]);
+		}
+	}
+	fprintf(file, "%d\n", white.score);
+	fprintf(file, "%d\n", black.score);
+	fclose(file);
+}
+
+void load(int board[][BOARD_RANGE]) {
+	#define _CRT_SECURE_NO_WARNINGS
+
+	char filename[20];
+	clrscr();
+	FILE* file;
+	_setcursortype(_NORMALCURSOR);
+	gotoxy(30, 11);
+	textcolor(3);
+	cputs("Loading stats file");
+	textcolor(WHITE);
+	gotoxy(15, 12);
+	cputs("Type a file name (ENTER to confirm): ");
+	int i = 0;
+	_setcursortype(_NOCURSOR);
+	while (true) {
+		char letter = getche();
+		if (letter == ENTER) break;
+		filename[i++] = letter;
+	}
+	filename[i] = '\0';
+	file = fopen(filename, "r");
+	for (int i = 0; i < BOARD_RANGE; i++) {
+		for (int j = 0; j < BOARD_RANGE; j++) {
+			fscanf(file, "%d", &board[i][j]);
+		}
+	}
+	fscanf(file, "%d", &white.score);
+	fscanf(file, "%d", &black.score);
+	fclose(file);
+}
+
+
+
 
 int chain_value(int* tab[]) {
 	int i = 0;
@@ -97,7 +185,7 @@ void check_capturing(int board[][BOARD_RANGE],int color) {
 	}
 }
 
-void fill_field(int field[][BOARD_RANGE]) {
+void restore_board(int field[][BOARD_RANGE]) {
 	
 	for (int i = 0; i < BOARD_RANGE; i++){
 		for (int j = 0; j < BOARD_RANGE; j++){
@@ -155,9 +243,13 @@ void print_legend(int startx, int starty, int board[][BOARD_RANGE], int x, int y
 	gotoxy(startx, starty++);
 	cputs("     i = place a stone");
 	gotoxy(startx, starty++);
-	cputs("     n = new game");
-	gotoxy(startx-8, starty++);
-	cputs("     b = restart + change board size");
+	cputs("     n = new game"); 
+	gotoxy(startx, starty++);
+	cputs("     s = save the game state");
+	gotoxy(startx, starty++);
+	cputs("     l = load the game state");
+	//gotoxy(startx-8, starty++);
+	//cputs("     b = restart + change board size");
 	gotoxy(startx, starty++);
 	sprintf(txt, "current (x,y) : (%d,%d)", x, y);
 	cputs(txt);
@@ -183,7 +275,6 @@ int main() {
 	//start = beging of game board
 	int zn = 0, zero = 0, board_startx, board_starty, x, y, legend_x, legend_y, startx, starty;
 	int board[BOARD_RANGE][BOARD_RANGE];
-	char txt[32];
 	bool turnBlack = true;
 	white.score = 0;
 	black.score = 0;
@@ -193,7 +284,7 @@ int main() {
 	Conio2_Init();
 #endif
 	settitle("GO GAME");
-	fill_field(board);
+	restore_board(board);
 
 	if (DEAFULT_DISPLAY) { // legend-right   board-left
 		
@@ -201,7 +292,7 @@ int main() {
 		//centering board based on screen width and height
 		board_starty = 13-BOARD_RANGE/2;
 		
-		legend_x = 9;
+		legend_x = 7;
 		legend_y = 6;
 		startx = board_startx + 2;
 		starty = board_starty + 1;
@@ -209,7 +300,7 @@ int main() {
 	else { // legend-left   board-right
 		board_startx = 8;
 		board_starty = 13 - BOARD_RANGE / 2;
-		legend_x = 55;
+		legend_x = 52;
 		legend_y = 7;
 		startx = board_startx + 2;
 		starty = board_starty + 1;
@@ -264,16 +355,28 @@ int main() {
 					check_capturing(board, BLACK_STONE);
 					turnBlack = true;
 				}
+				break;
 			case 'n':
 				//new game
-				if (zn == 'n') {
-					fill_field(board);
-					x = startx;
-					y = starty;
-					white.score = 0;
-					black.score = 0;
-				}
+			
+				restore_board(board);
+				x = startx;
+				y = starty;
+				white.score = 0;
+				black.score = 0;
+				break;
+			case 's':
+				//saving stats in file
+				save(board);
+				
+				break;
+			case 'l':
+				//loading stats in file
+				load(board);
 
+				break;
+			case 'h':
+				//restart and black handicap
 		}
 	} while (zn != 'q');
 
