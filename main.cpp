@@ -1,7 +1,7 @@
 #include<stdio.h>
 #include"conio2.h"
 #include <cstring>
-#define BOARD_SIZE 13
+#define BOARD_SIZE 19
 #define DEAFULT_DISPLAY true
 #define BOARD_BORDER_COLOR 13
 #define UP_ARROW 0x48
@@ -15,19 +15,19 @@
 #define BLACK_STONE 1
 #define WHITE_STONE 2
 #define OFFBOARD 3
-char pieces [] = { '-','X','O','#'};
-
-
-
+const char pieces [] = { '-','X','O','#'};
 const int BOARD_RANGE = BOARD_SIZE + 2; // 2 is size of margin
 
-int* block[100];
-int liberties = 0;
-int index = 0;
 
 
-bool isMarked(int* tab[], int *element) {
-	for (int i = 0; i < 1000; i++) {
+//global variables to count_librties
+int* chain[100];//array storing adresses of stones in chain
+int liberties = 0;//value of liberties in chain
+int chain_index = 0;//variable which helps ittering in chain array 
+
+
+bool isInChain(int* tab[], int *element) {
+	for (int i = 0; i < 100; i++) {
 		if (tab[i] == element) {
 			return true;
 		}
@@ -40,10 +40,10 @@ struct Player {
 	int score;
 }white, black;
 
-int group_value(int* tab[]) {
+int chain_value(int* tab[]) {
 	int i = 0;
 	while (true) {
-		if (block[i] == 0) break;
+		if (tab[i] == 0) break;
 		i++;
 	}
 	return i;
@@ -52,25 +52,26 @@ int group_value(int* tab[]) {
 void remove_captured() {
 	int i = 0;
 	while(true){
-		if(block[i]==0) break;
-		*block[i++] = EMPTY;
+		if(chain[i]==0) break;
+		*chain[i++] = EMPTY;
 	}
 }
 
-void count(int board[][BOARD_RANGE], int x, int y, int color) {
-	//init piece
-	int piece = board[y][x];
-	if (piece == OFFBOARD) return;
+
+//function which scan board after each move to find captured chain of stones
+void count_liberties(int board[][BOARD_RANGE], int x, int y, int color) {
+	//init current_square
+	int current_square = board[y][x];
+	if (current_square == OFFBOARD) return;
 	
-	
-	if (piece == color && !isMarked(block, &board[y][x])) {
-			block[index++] = &(board[y][x]);
-			count(board, x + 1, y,color);
-			count(board, x - 1, y,color);
-			count(board, x, y+1,color);
-			count(board, x, y-1,color);
+	if (current_square == color && !isInChain(chain, &board[y][x])) {
+			chain[chain_index++] = &(board[y][x]);
+			count_liberties(board, x + 1, y,color);
+			count_liberties(board, x - 1, y,color);
+			count_liberties(board, x, y+1,color);
+			count_liberties(board, x, y-1,color);
 	}
-	else if (piece == EMPTY) {
+	else if (current_square == EMPTY) {
 		liberties++;
 	}
 	
@@ -80,24 +81,20 @@ void check_capturing(int board[][BOARD_RANGE],int color) {
 	for (int i = 0; i < BOARD_RANGE; i++){
 		for (int j = 0; j < BOARD_RANGE; j++){
 			if (board[i][j] == color) {
-				count(board, j, i, color);
+				count_liberties(board, j, i, color);
 				if (liberties == 0) { 
 					remove_captured();
-					 if(color==WHITE_STONE)black.score += group_value(block);
-					 if (color == BLACK_STONE)white.score += group_value(block);
+					if(color==WHITE_STONE)black.score += chain_value(chain);
+					if (color == BLACK_STONE)white.score += chain_value(chain);
 				}
-				//restoring values after checking
-				memset(block, 0, sizeof(block));
+				//restoring global variables after chain liberties counting
+				memset(chain, 0, sizeof(chain));
 				liberties = 0;
-				index = 0;
+				chain_index = 0;
 				
 			}
 		}
 	}
-	//restoring values after checking
-	memset(block, 0, sizeof(block));
-	liberties = 0;
-	index = 0;
 }
 
 void fill_field(int field[][BOARD_RANGE]) {
@@ -110,9 +107,13 @@ void fill_field(int field[][BOARD_RANGE]) {
 	}
 }
 
-bool isLegal(int board[][BOARD_RANGE], int x, int y, int startx, int starty) {
+bool isLegal(int board[][BOARD_RANGE], int x, int y, int startx, int starty,int color) {
 	//check if coordinate is empty and has at least one liberty
-	if (board[(y - starty) + 1][((x - startx) / 2) + 1] == EMPTY && ((board[(y - starty) + 2][((x - startx) / 2) + 1] == EMPTY || board[(y - starty)][((x - startx) / 2) + 1] == EMPTY || board[(y - starty) + 1][((x - startx) / 2) + 2] == EMPTY || board[(y - starty) + 1][((x - startx) / 2)] == EMPTY))) return true;
+	if (board[(y - starty) + 1][((x - startx) / 2) + 1] == EMPTY) {
+		if(board[(y - starty) + 2][((x - startx) / 2) + 1] == EMPTY || board[(y - starty)][((x - startx) / 2) + 1] == EMPTY || board[(y - starty) + 1][((x - startx) / 2) + 2] == EMPTY || board[(y - starty) + 1][((x - startx) / 2)] == EMPTY) return true;
+		else if (board[(y - starty) + 2][((x - startx) / 2) + 1] == color || board[(y - starty)][((x - startx) / 2) + 1] == color || board[(y - starty) + 1][((x - startx) / 2) + 2] == color || board[(y - starty) + 1][((x - startx) / 2)] == color) return true;
+	}
+
 	return false;
 }
 
@@ -121,7 +122,7 @@ void print_board(int x, int y, int field[][BOARD_RANGE]) {
 	int startx = x;
 	
 	for (int i = 0; i < BOARD_RANGE; i++){
-		x = startx; // rows always from the start
+		x = startx;
 		for (int j = 0; j < BOARD_RANGE; j++){	
 			if (i == 0 || j == 0 || i == BOARD_RANGE - 1 || j == BOARD_RANGE - 1) {
 				gotoxy(x, y);
@@ -155,6 +156,8 @@ void print_legend(int startx, int starty, int board[][BOARD_RANGE], int x, int y
 	cputs("     i = place a stone");
 	gotoxy(startx, starty++);
 	cputs("     n = new game");
+	gotoxy(startx-8, starty++);
+	cputs("     b = restart + change board size");
 	gotoxy(startx, starty++);
 	sprintf(txt, "current (x,y) : (%d,%d)", x, y);
 	cputs(txt);
@@ -164,8 +167,8 @@ void print_legend(int startx, int starty, int board[][BOARD_RANGE], int x, int y
 	cputs("  GAME STATS");
 	textcolor(WHITE);
 	gotoxy(startx, starty++);
-	if(turnBlack) cputs("turn : BLACK");
-	if(!turnBlack)cputs("turn : WHITE");
+	if(turnBlack) cputs(" turn : BLACK");
+	if(!turnBlack)cputs(" turn : WHITE");
 	gotoxy(startx, starty++);
 	sprintf(txt1, "White : %d", WhitePoints );
 	cputs(txt1);
@@ -235,36 +238,42 @@ int main() {
 		zero = 0;
 		zn = getch();
 
-		//cursor moving only in board area
-		if(zn == 0) {
-			zero = 1;		
-			zn = getch();		
-			if (zn == UP_ARROW && y != starty) y--;
-			else if (zn == DOWN_ARROW && y != starty + (BOARD_SIZE - 1)) y++;
-			else if (zn == LEFT_ARROW && x != startx) x -= 2;
-			else if (zn == RIGHT_ARROW && x != startx + (BOARD_SIZE * 2 - 2)) x += 2;
-		}
-		// putting stone
-		if (zn == 'i') {
-			if (turnBlack && isLegal(board,x,y,startx,starty)) {
-				board[(y - starty)+1][((x - startx) / 2)+1] = BLACK_STONE;
-				check_capturing(board, WHITE_STONE);
-				turnBlack = false;
-			}
-			else if (!turnBlack&& isLegal(board, x, y, startx, starty)) {
-				board[(y - starty) + 1][((x - startx) / 2) + 1] = WHITE_STONE;
-				check_capturing(board,BLACK_STONE);
-				turnBlack = true;
-			}
-		}
+		switch (zn) {
+			case DOWN_ARROW:
+				if (y != starty + (BOARD_SIZE - 1)) y++;
+				break;
+			case UP_ARROW:
+				if (zn == UP_ARROW && y != starty) y--;
+				break;
+			case LEFT_ARROW:
+				if (x != startx) x -= 2;
+				break;
+			case RIGHT_ARROW:
+				if (x != startx + (BOARD_SIZE * 2 - 2)) x += 2;
+				break;
+			case 'i':
+				//black stone placement
+				if (turnBlack && isLegal(board, x, y, startx, starty, BLACK_STONE)) {
+					board[(y - starty) + 1][((x - startx) / 2) + 1] = BLACK_STONE;
+					check_capturing(board, WHITE_STONE);
+					turnBlack = false;
+				}
+				//white stone placement
+				else if (!turnBlack && isLegal(board, x, y, startx, starty, WHITE_STONE)) {
+					board[(y - starty) + 1][((x - startx) / 2) + 1] = WHITE_STONE;
+					check_capturing(board, BLACK_STONE);
+					turnBlack = true;
+				}
+			case 'n':
+				//new game
+				if (zn == 'n') {
+					fill_field(board);
+					x = startx;
+					y = starty;
+					white.score = 0;
+					black.score = 0;
+				}
 
-		//new game
-		if (zn == 'n') {
-			fill_field(board);
-			x = startx;
-			y = starty;
-			white.score = 0;
-			black.score = 0;
 		}
 	} while (zn != 'q');
 
