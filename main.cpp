@@ -25,12 +25,6 @@ struct Player {
 	int score;
 }white, black;
 
-
-//global variables to count_librties
-int* chain[100];//array storing adresses of stones in chain
-int liberties = 0;//value of liberties in chain
-int chain_index = 0;//variable which helps ittering in chain array 
-
 void print_board(int x, int y, int field[][BOARD_RANGE]) {
 	int starty = y;
 	int startx = x;
@@ -205,49 +199,49 @@ int count_stones_in_chain(int* tab[]) {
 }
 
 
-void remove_captured() {
+void remove_captured(int * chain[]) {
 	int i = 0;
 	while(true){
 		if(chain[i]==0) break;
-		*chain[i++] = EMPTY;
+		*(chain[i++]) = EMPTY;
 	}
 }
 
 
 //function which scan board after each move to find captured chain of stones
-void count_liberties(int board[][BOARD_RANGE], int x, int y, int color) {
+void count_liberties(int board[][BOARD_RANGE], int x, int y, int color, int * chain_index, int* liberties, int * chain[]) {
 	//init current_square
 	int current_square = board[y][x];
 	if (current_square == OFFBOARD) return;
 	
 	if (current_square == color && !isInChain(chain, &board[y][x])) {
-			chain[chain_index++] = &(board[y][x]);
-			count_liberties(board, x + 1, y,color);
-			count_liberties(board, x - 1, y,color);
-			count_liberties(board, x, y+1,color);
-			count_liberties(board, x, y-1,color);
+			chain[(*chain_index)++] = &(board[y][x]);
+			count_liberties(board, x + 1, y,color,chain_index,liberties, chain);
+			count_liberties(board, x - 1, y,color, chain_index, liberties, chain);
+			count_liberties(board, x, y+1,color, chain_index, liberties, chain);
+			count_liberties(board, x, y-1,color, chain_index, liberties, chain);
 	}
 	else if (current_square == EMPTY) {
-		liberties++;
+		(*liberties)++;
 	}
 	
 }
 
 
-void check_capturing(int board[][BOARD_RANGE],int color) {
+void check_capturing(int board[][BOARD_RANGE],int color, int * chain_index, int *liberties, int * chain[]) {
 	for (int i = 0; i < BOARD_RANGE; i++){
 		for (int j = 0; j < BOARD_RANGE; j++){
 			if (board[i][j] == color) {
-				count_liberties(board, j, i, color);
-				if (liberties == 0) { 
-					remove_captured();
+				count_liberties(board, j, i, color,chain_index,liberties,chain);
+				if (*liberties == 0) { 
+					remove_captured(chain);
 					if(color==WHITE_STONE)black.score += count_stones_in_chain(chain);
 					if (color == BLACK_STONE)white.score += count_stones_in_chain(chain);
 				}
 				//restoring global variables after chain liberties counting
 				memset(chain, 0, sizeof(chain));
-				liberties = 0;
-				chain_index = 0;
+				(*liberties) = 0;
+				*chain_index = 0;
 				
 			}
 		}
@@ -255,17 +249,17 @@ void check_capturing(int board[][BOARD_RANGE],int color) {
 }
 
 
-void place_stone(int board[][BOARD_RANGE],bool* turnBlack, int x, int y, int startx, int starty) {
+void place_stone(int board[][BOARD_RANGE],bool* turnBlack, int x, int y, int startx, int starty, int* chain_index, int* liberties,int* chain[]) {
 	//black stone placing
 	if (*turnBlack && isLegal(board, x, y, startx, starty, BLACK_STONE)) {
 		board[(y - starty) + 1][((x - startx) / 2) + 1] = BLACK_STONE;
-		check_capturing(board, WHITE_STONE);
+		check_capturing(board, WHITE_STONE, chain_index, liberties,chain);
 		*turnBlack = false;
 	}
 	//white stone placing
 	else if (!*turnBlack && isLegal(board, x, y, startx, starty, WHITE_STONE)) {
 		board[(y - starty) + 1][((x - startx) / 2) + 1] = WHITE_STONE;
-		check_capturing(board, BLACK_STONE);
+		check_capturing(board, BLACK_STONE,chain_index, liberties,chain);
 		*turnBlack = true;
 	}
 }
@@ -295,7 +289,7 @@ void print_legend(int startx, int starty, int board[][BOARD_RANGE], int x, int y
 	//gotoxy(startx-8, starty++);
 	//cputs("     b = restart + change board size");
 	gotoxy(startx, starty++);
-	sprintf(txt, "current (x,y) : (%d,%d)", x, y);
+	sprintf(txt, "current [x,y] : [%d,%d]", (x-(startx_board + 2))/2, y-(starty_board+1));
 	cputs(txt);
 	gotoxy(startx, starty+=3);
 	gotoxy(startx, starty++);
@@ -323,6 +317,10 @@ int main() {
 	bool turnBlack = true;
 	white.score = 0;
 	black.score = 0;
+	int chain_index = 0;//variable which helps ittering in chain array 
+	int liberties = 0;//value of liberties in chain
+	int* chain[100];//array storing adresses of stones in chain
+	memset(chain, 0, 100);// filling chain array
 	textmode(C80);//console widnow size
 
 #ifndef __cplusplus
@@ -332,11 +330,9 @@ int main() {
 	restore_board(board);
 
 	if (DEAFULT_DISPLAY) { // legend-right   board-left
-		
 		board_startx = 38;
 		//centering board based on screen width and height
 		board_starty = 13-BOARD_RANGE/2;
-		
 		legend_x = 7;
 		legend_y = 6;
 		startx = board_startx + 2;
@@ -350,27 +346,20 @@ int main() {
 		startx = board_startx + 2;
 		starty = board_starty + 1;
 	}
-
-
 	x = startx;
 	y = starty;
 
 	_setcursortype(_NOCURSOR);
 	do {
-		
-		
 		clrscr();
 		gotoxy(25, 1);
 		cputs("Szymon Groszkowski nr 193141");
 		
-		
 		print_legend(legend_x, legend_y, board, x, y, board_startx, board_starty,turnBlack,white.score,black.score);
-		
 		
 		gotoxy(x, y);
 		putch('@');
 
-		
 		zero = 0;
 		zn = getch();
 
@@ -388,40 +377,32 @@ int main() {
 				if (x != startx + (BOARD_SIZE * 2 - 2)) x += 2;
 				break;
 			case 'i':
-				place_stone(board, &turnBlack, x, y, startx, starty);
+				place_stone(board, &turnBlack, x, y, startx, starty,&chain_index,&liberties,chain);
 				break;
-			case 'n':
-				//new game
-			
+			case 'n'://new game
 				restore_board(board);
 				x = startx;
 				y = starty;
 				white.score = 0;
 				black.score = 0;
 				break;
-			case 's':
-				//saving stats in file
+			case 's'://saving stats in file
 				save(board);
 				
 				break;
-			case 'l':
-				//loading stats in file
+			case 'l'://loading stats in file
 				load(board);
 				break;
-			case 'h':
-				//restarting game
+			case 'h'://restarting game
 				restore_board(board);
 				x = startx;
 				y = starty;
 				white.score = 0;
 				black.score = 0;
-
 				handicap(legend_x, legend_y, board, x, y, board_startx, board_starty,startx, starty);
 				break;
 		}
 	} while (zn != 'q');
-
 	_setcursortype(_NORMALCURSOR);
-					
 	return 0;
 	}
