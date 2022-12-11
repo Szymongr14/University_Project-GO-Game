@@ -19,11 +19,8 @@
 #define WHITE_STONE 2
 #define OFFBOARD 3
 const char pieces [] = { '-','X','O','#'};
-const int BOARD_RANGE = BOARD_SIZE + 2; // 2 is size of margin
+const int BOARD_RANGE = BOARD_SIZE + 2; // 2 is size of margin/border
 
-struct Player {
-	int score;
-}white, black;
 
 void print_board(int x, int y, int field[][BOARD_RANGE]) {
 	int starty = y;
@@ -50,7 +47,6 @@ void print_board(int x, int y, int field[][BOARD_RANGE]) {
 }
 
 void restore_board(int field[][BOARD_RANGE]) {
-	
 	for (int i = 0; i < BOARD_RANGE; i++){
 		for (int j = 0; j < BOARD_RANGE; j++){
 			if (i == 0 || j == 0 || i == BOARD_RANGE - 1 || j == BOARD_RANGE - 1) field[j][i] = OFFBOARD;
@@ -60,12 +56,13 @@ void restore_board(int field[][BOARD_RANGE]) {
 }
 
 bool isLegal(int board[][BOARD_RANGE], int x, int y, int startx, int starty,int color) {
-	//check if coordinate is empty and has at least one liberty
+	//check if square is empty 
 	if (board[(y - starty) + 1][((x - startx) / 2) + 1] == EMPTY) {
+		//check if square has at least one liberty
 		if(board[(y - starty) + 2][((x - startx) / 2) + 1] == EMPTY || board[(y - starty)][((x - startx) / 2) + 1] == EMPTY || board[(y - starty) + 1][((x - startx) / 2) + 2] == EMPTY || board[(y - starty) + 1][((x - startx) / 2)] == EMPTY) return true;
+		// or checking if square is in contact with the colour to be placed
 		else if (board[(y - starty) + 2][((x - startx) / 2) + 1] == color || board[(y - starty)][((x - startx) / 2) + 1] == color || board[(y - starty) + 1][((x - startx) / 2) + 2] == color || board[(y - starty) + 1][((x - startx) / 2)] == color) return true;
 	}
-
 	return false;
 }
 
@@ -98,7 +95,6 @@ void print_handicap_controls(int legend_x,int legend_y, int board[][BOARD_RANGE]
 void handicap(int legend_x, int legend_y, int board[][BOARD_RANGE], int x, int y, int board_startx, int board_starty,int startx, int starty){
 	int zn;
 	do {
-		//restarting game
 		clrscr();
 		print_handicap_controls(legend_x, legend_y, board, x, y, board_startx, board_starty);
 		gotoxy(x, y);
@@ -117,7 +113,7 @@ void handicap(int legend_x, int legend_y, int board[][BOARD_RANGE], int x, int y
 		case RIGHT_ARROW:
 			if (x != startx + (BOARD_SIZE * 2 - 2)) x += 2;
 			break;
-		case 'i':
+		case 'i'://placing only black stones
 			if (isLegal(board, x, y, startx, starty, BLACK_STONE)) {
 				board[(y - starty) + 1][((x - startx) / 2) + 1] = BLACK_STONE;
 			}
@@ -127,7 +123,7 @@ void handicap(int legend_x, int legend_y, int board[][BOARD_RANGE], int x, int y
 }
 
 
-void save(int board[][BOARD_RANGE]) {
+void save(int board[][BOARD_RANGE], int * black_score, int* white_score) {
 	char filename[20];
 	clrscr();
 	FILE* file;
@@ -152,13 +148,13 @@ void save(int board[][BOARD_RANGE]) {
 			fprintf(file, "%d\n", board[i][j]);
 		}
 	}
-	fprintf(file, "%d\n", white.score);
-	fprintf(file, "%d\n", black.score);
+	fprintf(file, "%d\n", *white_score);
+	fprintf(file, "%d\n", *black_score);
 	fclose(file);
 }
 
 
-void load(int board[][BOARD_RANGE]) {
+void load(int board[][BOARD_RANGE],int* black_score, int* white_score) {
 	char filename[20];
 	clrscr();
 	FILE* file;
@@ -183,8 +179,8 @@ void load(int board[][BOARD_RANGE]) {
 			fscanf(file, "%d", &board[i][j]);
 		}
 	}
-	fscanf(file, "%d", &white.score);
-	fscanf(file, "%d", &black.score);
+	fscanf(file, "%d", &( * white_score));
+	fscanf(file, "%d", &(*black_score));
 	fclose(file);
 }
 
@@ -210,8 +206,7 @@ void remove_captured(int * chain[]) {
 
 //function which scan board after each move to find captured chain of stones
 void count_liberties(int board[][BOARD_RANGE], int x, int y, int color, int * chain_index, int* liberties, int * chain[]) {
-	//init current_square
-	int current_square = board[y][x];
+	int current_square = board[y][x];//init current_square
 	if (current_square == OFFBOARD) return;
 	
 	if (current_square == color && !isInChain(chain, &board[y][x])) {
@@ -224,48 +219,46 @@ void count_liberties(int board[][BOARD_RANGE], int x, int y, int color, int * ch
 	else if (current_square == EMPTY) {
 		(*liberties)++;
 	}
-	
 }
 
 
-void check_capturing(int board[][BOARD_RANGE],int color, int * chain_index, int *liberties, int * chain[]) {
+void check_capturing(int board[][BOARD_RANGE],int color, int * chain_index, int *liberties, int * chain[],int* black_score, int* white_score) {
 	for (int i = 0; i < BOARD_RANGE; i++){
 		for (int j = 0; j < BOARD_RANGE; j++){
 			if (board[i][j] == color) {
 				count_liberties(board, j, i, color,chain_index,liberties,chain);
 				if (*liberties == 0) { 
 					remove_captured(chain);
-					if(color==WHITE_STONE)black.score += count_stones_in_chain(chain);
-					if (color == BLACK_STONE)white.score += count_stones_in_chain(chain);
+					if(color==WHITE_STONE)*black_score += count_stones_in_chain(chain);
+					if (color == BLACK_STONE)*white_score += count_stones_in_chain(chain);
 				}
-				//restoring global variables after chain liberties counting
-				memset(chain, 0, sizeof(chain));
+				//restoring variables after chain liberties counting
+				memset(chain, 0, 100);
 				(*liberties) = 0;
 				*chain_index = 0;
-				
 			}
 		}
 	}
 }
 
 
-void place_stone(int board[][BOARD_RANGE],bool* turnBlack, int x, int y, int startx, int starty, int* chain_index, int* liberties,int* chain[]) {
+void place_stone(int board[][BOARD_RANGE],bool* turnBlack, int x, int y, int startx, int starty, int* chain_index, int* liberties,int* chain[],int* black_score, int* white_score) {
 	//black stone placing
 	if (*turnBlack && isLegal(board, x, y, startx, starty, BLACK_STONE)) {
 		board[(y - starty) + 1][((x - startx) / 2) + 1] = BLACK_STONE;
-		check_capturing(board, WHITE_STONE, chain_index, liberties,chain);
+		check_capturing(board, WHITE_STONE, chain_index, liberties,chain,black_score,white_score);
 		*turnBlack = false;
 	}
 	//white stone placing
 	else if (!*turnBlack && isLegal(board, x, y, startx, starty, WHITE_STONE)) {
 		board[(y - starty) + 1][((x - startx) / 2) + 1] = WHITE_STONE;
-		check_capturing(board, BLACK_STONE,chain_index, liberties,chain);
+		check_capturing(board, BLACK_STONE,chain_index, liberties,chain,black_score, white_score);
 		*turnBlack = true;
 	}
 }
 
 
-void print_legend(int startx, int starty, int board[][BOARD_RANGE], int x, int y, int startx_board, int starty_board,bool turnBlack, int WhitePoints, int BlackPoints) {
+void print_legend(int startx, int starty, int board[][BOARD_RANGE], int x, int y, int startx_board, int starty_board,bool turnBlack, int * WhitePoints, int *BlackPoints) {
 	char txt[32];
 	char txt1[32];
 	gotoxy(startx, starty++);
@@ -286,8 +279,6 @@ void print_legend(int startx, int starty, int board[][BOARD_RANGE], int x, int y
 	cputs("     l = load the game state");
 	gotoxy(startx-4, starty++);
 	cputs("     h = restart and set handicap");
-	//gotoxy(startx-8, starty++);
-	//cputs("     b = restart + change board size");
 	gotoxy(startx, starty++);
 	sprintf(txt, "current [x,y] : [%d,%d]", (x-(startx_board + 2))/2, y-(starty_board+1));
 	cputs(txt);
@@ -300,23 +291,23 @@ void print_legend(int startx, int starty, int board[][BOARD_RANGE], int x, int y
 	if(turnBlack) cputs(" turn : BLACK");
 	if(!turnBlack)cputs(" turn : WHITE");
 	gotoxy(startx, starty++);
-	sprintf(txt1, "White : %d", WhitePoints );
+	sprintf(txt1, "White : %d", *WhitePoints );
 	cputs(txt1);
 	gotoxy(startx, starty++);
-	sprintf(txt, "Black : %d", BlackPoints);
+	sprintf(txt, "Black : %d", *BlackPoints);
 	cputs(txt);
 	print_board(startx_board, starty_board, board);
 }
 
 
 int main() {
-	//board_start = beginig board with borders
+	//board_start = beginig of board with borders
 	//start = beging of game board [0][0] 
 	int zn = 0, zero = 0, board_startx, board_starty, x, y, legend_x, legend_y, startx, starty;
 	int board[BOARD_RANGE][BOARD_RANGE];
 	bool turnBlack = true;
-	white.score = 0;
-	black.score = 0;
+	int white_score = 0;
+	int black_score = 0;
 	int chain_index = 0;//variable which helps ittering in chain array 
 	int liberties = 0;//value of liberties in chain
 	int* chain[100];//array storing adresses of stones in chain
@@ -354,12 +345,10 @@ int main() {
 		clrscr();
 		gotoxy(25, 1);
 		cputs("Szymon Groszkowski nr 193141");
-		
-		print_legend(legend_x, legend_y, board, x, y, board_startx, board_starty,turnBlack,white.score,black.score);
+		print_legend(legend_x, legend_y, board, x, y, board_startx, board_starty,turnBlack,&white_score,&black_score);
 		
 		gotoxy(x, y);
 		putch('@');
-
 		zero = 0;
 		zn = getch();
 
@@ -377,28 +366,27 @@ int main() {
 				if (x != startx + (BOARD_SIZE * 2 - 2)) x += 2;
 				break;
 			case 'i':
-				place_stone(board, &turnBlack, x, y, startx, starty,&chain_index,&liberties,chain);
+				place_stone(board, &turnBlack, x, y, startx, starty,&chain_index,&liberties,chain,&black_score,&white_score);
 				break;
 			case 'n'://new game
 				restore_board(board);
 				x = startx;
 				y = starty;
-				white.score = 0;
-				black.score = 0;
+				white_score = 0;
+				black_score = 0;
 				break;
 			case 's'://saving stats in file
-				save(board);
-				
+				save(board,&black_score, &white_score);
 				break;
 			case 'l'://loading stats in file
-				load(board);
+				load(board,&black_score, &white_score);
 				break;
-			case 'h'://restarting game
+			case 'h'://restarting game and handicap
 				restore_board(board);
 				x = startx;
 				y = starty;
-				white.score = 0;
-				black.score = 0;
+				white_score = 0;
+				black_score = 0;
 				handicap(legend_x, legend_y, board, x, y, board_startx, board_starty,startx, starty);
 				break;
 		}
